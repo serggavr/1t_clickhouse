@@ -10,18 +10,18 @@ docker-compose up
 
 
 Создание соединения с Postgres:
-```clickhouse
+```sql
 CREATE DATABASE IF NOT EXISTS postgres
 ENGINE = PostgreSQL('127.0.0.1:5432', 'testdb', 'postgres', 'postgres');
 ```  
 Создание БД для DWH:
-```clickhouse
+```sql
 CREATE DATABASE IF NOT EXISTS dwh
 ENGINE = PostgreSQL('127.0.0.1:5432', 'testdb', 'postgres', 'postgres');
 ```  
 Инициализация promo_effectiveness в DWH:
 
-```clickhouse
+```sql
 CREATE DATABASE IF NOT EXISTS testdb
 ENGINE = PostgreSQL('http://127.0.0.1:5434', 'testdb', 'postgres', 'postgres');
 
