@@ -21,9 +21,6 @@ CREATE DATABASE IF NOT EXISTS dwh
 Инициализация promo_effectiveness в DWH:
 
 ```sql
-CREATE DATABASE IF NOT EXISTS testdb
-ENGINE = PostgreSQL('http://127.0.0.1:5434', 'testdb', 'postgres', 'postgres');
-
 CREATE TABLE IF NOT EXISTS dwh.promo_effectiveness
 (
 user_lk_id UInt32 DEFAULT NULL,
