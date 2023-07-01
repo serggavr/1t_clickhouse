@@ -17,7 +17,6 @@ ENGINE = PostgreSQL('127.0.0.1:5432', 'testdb', 'postgres', 'postgres');
 Создание БД для DWH:
 ```sql
 CREATE DATABASE IF NOT EXISTS dwh
-ENGINE = PostgreSQL('127.0.0.1:5432', 'testdb', 'postgres', 'postgres');
 ```  
 Инициализация promo_effectiveness в DWH:
 
