@@ -1,120 +1,83 @@
-## Создание витрины 'promo_effectiveness' в 'Clickhouse'
+## Создание витрины 'sales' в 'Clickhouse'
 ***
-
-Соединения коннтейнеров `postgres`, `clickhouse` и `click-ui` внутри одной сети. 
-Необходимо добавить в `docker-compose.yml` следующие записи:
-```dockerfile
-#version: "3.8"
-#services:
-#  postgres:
-#    image: postgres:latest
-    networks:
-      - clickhouse      
-    ports:
-      - "5434:5432"
-#    environment:
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: postgres
-#      POSTGRES_DB: testdb
-#    volumes:
-#      - ./postgres/ddl/init.sql:/docker-entrypoint-initdb.d/init.sql
-#      - ./postgres/dml/load_data_scripts.sql:/docker-entrypoint-initdb.d/load_data_scripts.sql      
-#    healthcheck:
-#      test: ["CMD", "pg_isready", "-U", "postgres"]
-#      interval: 5s
-#      retries: 5
-#    restart: always
-#
-#  clickhouse:
-#    image: clickhouse/clickhouse-server:latest
-    networks:
-        - clickhouse
-    ports:
-        - "8123:8123"
-#    ulimits:
-#        nofile:
-#          soft: 262144
-#          hard: 262144 
-#    volumes:
-#      - "clickhouse-data:/var/lib/clickhouse"
-#
-#  click-ui:
-#    image: spoonest/clickhouse-tabix-web-client
-    networks:
-        - clickhouse
-    ports:
-        - "8124:80"
-#    depends_on:
-#      - clickhouse
-#    restart: always
-#volumes:
-#  clickhouse-data:
-networks:
-    clickhouse:
-      driver: bridge
-      name: local_network
-```
-
-Создание пользователя *clickhouse_user* с паролем *click* в `Postgres`.  
-В `postgres/ddl/createuser.sql` необходимо добавить:
-```sql
-CREATE ROLE clickhouse_user SUPERUSER LOGIN PASSWORD 'click';
-```  
-Создание сущности *dwh* в `Postgres`.  
-В `postgres/ddl/init.sql` необходимо добавить:
-```sql
-CREATE TABLE IF NOT EXISTS dwh
-(
-user_lk_id INTEGER PRIMARY KEY,
-user_sex VARCHAR(8),
-user_bod_category INTEGER,
-user_email VARCHAR(128),
-user_phone VARCHAR(16),
-user_most_purshased_model INTEGER,
-user_most_purshased_brend INTEGER,
-user_most_purshased_category INTEGER,
-promo_item_spend_per_month INTEGER
-);
-```
-Заполнение *dwh* в `Postgres` данными.
-В `postgres/dml/load_data_scripts.sql` необходимо добавить:
-```sql
-INSERT INTO dwh (
-     user_lk_id,
-     user_sex,
-     user_bod_category,
-     user_email,
-     user_phone,
-     user_most_purshased_model,
-     user_most_purshased_brend,
-     user_most_purshased_category,
-     promo_item_spend_per_month)
-VALUES (66, 'male', 2, 'test@test.ru', '+79120000000', 1661, 13, 1, 5),
-       (65, 'female', 3, 'email@email.com', '+75550000011', 800, 2, 1, 2);
-```   
 Запуск docker-compose:
 ```dockerfile
 docker-compose up
 ```  
 В интерфейсе Tabix `localhost:8124`  
 
-Создание БД с именем *db_in_ch* в `Clickhouse` для *dwh* из `Postgres``:
+
+Создание БД *db_in_ch* в `Clickhouse` создание сущностей в `Clickhouse` , соединение с`Postgres`, перенос данных в `Clickhouse` :
+
 ```sql
 CREATE DATABASE db_in_ch;
-```  
-Создание сущности *promo_effectiveness* в `Clickhouse` отражающую структуру и типы данных *dwh* из `Postgres`:
+
+-- Переходии в БД db_in_ch
+
+CREATE TABLE IF NOT EXISTS product(
+   product_id UInt32,
+   product_name String,
+   price Float64,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'product', 'clickhouse_user', 'click');
+
+CREATE TABLE IF NOT EXISTS shops(
+   shop_id UInt32,
+   shop_name String,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'shops', 'clickhouse_user', 'click');
+
+CREATE TABLE IF NOT EXISTS plan(
+   plan_date Date,
+   product_id UInt32,
+   plan_cnt Int32,
+   shop_name String,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'plan', 'clickhouse_user', 'click');
+
+CREATE TABLE IF NOT EXISTS shop_dns(
+	shop_id UInt32,
+   date Date,
+   product_id UInt32,
+   sales_cnt Int32,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'shop_dns', 'clickhouse_user', 'click');
+
+CREATE TABLE IF NOT EXISTS shop_mvideo(
+	shop_id UInt32,
+   date Date,
+   product_id UInt32,
+   sales_cnt Int32,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'shop_mvideo', 'clickhouse_user', 'click');
+
+CREATE TABLE IF NOT EXISTS shop_sitilink(
+	shop_id UInt32,
+   date Date,
+   product_id UInt32,
+   sales_cnt Int32,
+) ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'shop_sitilink', 'clickhouse_user', 'click');
+
+```
+Создание витрины 'sales' в `Clickhouse`:
 ```sql
-CREATE TABLE db_in_ch.promo_effectiveness
-(
-    user_lk_id UInt32,
-    user_sex String,
-    user_bod_category Int32,
-    user_email String,
-    user_phone String,
-    user_most_purshased_model Int32,
-    user_most_purshased_brend Int32,
-    user_most_purshased_category Int32,
-    promo_item_spend_per_month Int32,
-)
-ENGINE = PostgreSQL('postgres:5432', 'db_in_psg', 'dwh', 'clickhouse_user', 'click');
-```  
+WITH sales AS 
+	(SELECT * FROM (
+		SELECT * FROM shop_dns 
+		union all 
+		SELECT * FROM shop_mvideo 
+		union all 
+		SELECT * FROM shop_sitilink
+		)
+	)
+	select
+		toMonth(plan_date) AS month,
+		shops.shop_name as shop_name,
+		product.product_name,
+		sum(sales_cnt) as sales_fact,
+		sum(plan_cnt) as sales_plan,
+		sum(sales_cnt)/sum(plan_cnt) AS seles_fact_plan,
+		sum(sales_cnt) * price AS income_fact,
+		sum(plan_cnt) * price AS income_plan,
+		(sum(sales_cnt) * price) - (sum(plan_cnt) * price) AS income_fact_plan
+	from sales
+join shops on sales.shop_id = shops.shop_id
+join plan on plan.shop_name = shops.shop_name
+join product on product.product_id = sales.product_id
+GROUP by month, shops.shop_name, product.product_name, product.price
+```
