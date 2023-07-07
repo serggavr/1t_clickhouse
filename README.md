@@ -57,16 +57,18 @@ CREATE TABLE IF NOT EXISTS shop_sitilink(
 Создание витрины 'sales' в `Postgres`:
 ```sql
 with sales as (
-select
-date_part('month', date) as month,
-* 
-from 
-(select * from public.shop_dns sd
-	union all
- select * from public.shop_mvideo sm
- 	union all
- select * from public.shop_sitilink ss 
-) as sl), sales_and_plan as (
+	select
+		date_part('month', date) as month,
+		* 
+	from 
+		(select * from public.shop_dns sd
+			union all
+		 select * from public.shop_mvideo sm
+		 	union all
+		 select * from public.shop_sitilink ss 
+		) as sl
+), 
+sales_and_plan as (
 	select
 		month,
 		shops.shop_id as shop_id,
@@ -79,24 +81,34 @@ from
 		sum(sales_cnt * price) AS income_fact,
 		sum(plan_cnt * price) AS income_plan,
 		sum((sales_cnt * price) - (plan_cnt * price)) AS income_fact_plan,
-		max(sales.sales_cnt) as max_sales_per_day
+		avg(sales.sales_cnt) as avg_sales,
+		max(sales.sales_cnt) as max_sales
 	from sales
 join shops on sales.shop_id = shops.shop_id
 join plan on plan.shop_name = shops.shop_name and plan.plan_date = date and plan.product_id = sales.product_id
 join product on product.product_id = sales.product_id
 where shops.shop_id = 2 and date_part('month', date) = 1
 group by month, shops.shop_name, shops.shop_id, product.product_id, product.product_name
-)
-select
-    *,
-    (select date from sales
+),
+sales_and_plan_and_max_sales_day as (
+	select
+	*,
+	(select date from sales
         where sales.shop_id = sales_and_plan.shop_id
         and sales.month = sales_and_plan.month
         and sales.product_id = sales_and_plan.product_id
         order by sales_cnt desc
         limit 1
-    ) as day_of_max_sales
-from sales_and_plan
+	) as date_max_sales
+	from sales_and_plan
+)
+select 
+    * 
+from sales_and_plan_and_max_sales_day 
+left join promo 
+	on promo.product_id = sales_and_plan_and_max_sales_day.product_id 
+	and promo.shop_name = sales_and_plan_and_max_sales_day.shop_name
+	and promo.promo_date  = sales_and_plan_and_max_sales_day.date_max_sales
 ```  
 
 
