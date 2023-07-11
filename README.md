@@ -1,5 +1,7 @@
 ## Создание витрины 'sales' в 'Superset'
 ***
+Дашборд sales в Superset: ![sales](./supersetMart.png)
+***
 Запуск docker-compose с Postgres и Clickhouse:
 ```bash
 docker-compose up
