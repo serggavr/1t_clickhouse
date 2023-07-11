@@ -3,7 +3,7 @@ services:
   postgres:
     image: postgres:latest
     networks:
-      - clickhouse
+      - local_network
     ports:
       - "5434:5432"
     environment:
@@ -22,7 +22,7 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     networks:
-        - clickhouse
+        - local_network
     ulimits:
         nofile:
           soft: 262144
@@ -34,7 +34,7 @@ services:
   click-ui:
     image: spoonest/clickhouse-tabix-web-client
     networks:
-        - clickhouse
+        - local_network
     depends_on:
       - clickhouse
     ports:
@@ -43,6 +43,6 @@ services:
 volumes:
   clickhouse-data:
 networks:
-    clickhouse:
+    local_network:
       driver: bridge
       name: local_network
