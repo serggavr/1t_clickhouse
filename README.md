@@ -1,4 +1,4 @@
-## Создание витрины 'sales' в 'Clickhouse'
+## Создание витрины 'sales' в 'Superset'
 ***
 Запуск docker-compose с Postgres и Clickhouse:
 ```bash
@@ -46,7 +46,7 @@ P.S для соединения Superset с Postgres тоже используе
 
 Создание БД *db_in_ch* в `Clickhouse` создание сущностей в `Clickhouse` , соединение с`Postgres`, перенос данных в `Clickhouse` :
 
-```clickhouse
+```sql
 CREATE DATABASE db_in_ch;
 
 -- Переходии в БД db_in_ch
